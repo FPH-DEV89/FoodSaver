@@ -1,0 +1,7 @@
+{
+  "VAPID_PRIVATE_KEY": "-----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg/Nt1yTvUnNmd/iMt\nIi7rUjmMqM+bBKQhM7AJpXC1PEWhRANCAARn1lh+PWnH9O7/r7eY81ukwu3blwYQ\nXc/wyDL1hZQKwrPr6Hn5eb2sx6HR5YkZDGukL+/oDVM5rqhcFwFqRjpN\n-----END PRIVATE KEY-----\n",
+  "VAPID_PUBLIC_KEY": "BGfWWH49acf07v-vt5jzW6TC7duXBhBdz_DIMvWFlArCs-voefl5vazHodHliRkMa6Qv7-gNUzmuqFwXAWpGOk0=",
+  "VAPID_CLAIMS": {
+    "sub": "mailto:your@email.com"
+  }
+}

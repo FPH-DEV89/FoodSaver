@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventaire - FoodSaver</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">FoodSaver</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/scan">Scanner</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/inventory">Inventaire</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h2>Mon Inventaire</h2>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="/scan" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Ajouter un produit
+                </a>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" class="form-control" id="search" placeholder="Rechercher un produit...">
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="btn-group category-filters" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" data-category="all">Tous</button>
+                    {% for category in categories %}
+                    <button type="button" class="btn btn-outline-secondary" 
+                            data-category="{{ category.id }}"
+                            style="border-color: {{ category.couleur }}; color: {{ category.couleur }};">
+                        {{ category.nom }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="inventory-container">
+            {% for product in products %}
+            <div class="col-md-4 mb-4 product-card" data-category="{{ product.category_id }}">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="category-indicator" style="background-color: {{ product.category_couleur }}"></div>
+                        <h5 class="card-title">{{ product.nom }}</h5>
+                        <p class="card-text">
+                            <small class="text-muted">Catégorie: {{ product.category_nom }}</small><br>
+                            <small class="text-muted">Quantité: {{ product.quantite }} {{ product.unite }}</small>
+                        </p>
+                        <p class="card-text">
+                            <small class="text-muted">Date de péremption: {{ formatDate(product.date_peremption) }}</small>
+                        </p>
+                        <p class="card-text">
+                            <span class="badge {{ getDaysLeftClass(product.jours_restants) }}">
+                                {{ formatDaysLeft(product.jours_restants) }}
+                            </span>
+                        </p>
+                        <button onclick="deleteProduct({{ product.id }})" class="btn btn-danger btn-sm">
+                            <i class="bi bi-trash"></i> Supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            loadInventory();
+
+            // Gestionnaire de recherche
+            document.getElementById('search').addEventListener('input', filterProducts);
+            
+            // Gestionnaire de filtres
+            document.querySelectorAll('[data-filter]').forEach(button => {
+                button.addEventListener('click', function() {
+                    document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    filterProducts();
+                });
+            });
+
+            // Ajout du filtrage par catégorie
+            const categoryButtons = document.querySelectorAll('.category-filters button');
+            categoryButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Mise à jour des boutons actifs
+                    categoryButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Filtrage des produits
+                    const selectedCategory = this.dataset.category;
+                    const products = document.querySelectorAll('.product-card');
+                    
+                    products.forEach(product => {
+                        if (selectedCategory === 'all' || product.dataset.category === selectedCategory) {
+                            product.style.display = '';
+                        } else {
+                            product.style.display = 'none';
+                        }
+                    });
+                });
+            });
+        });
+
+        async function loadInventory() {
+            try {
+                const response = await fetch('/api/get-products');
+                const products = await response.json();
+                const inventoryList = document.getElementById('inventory-container');
+                
+                if (products.length === 0) {
+                    inventoryList.innerHTML = `
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                Votre inventaire est vide.
+                                <a href="/scan" class="alert-link">Scannez un produit</a> pour commencer à gérer vos aliments.
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                inventoryList.innerHTML = products.map((product, index) => {
+                    const daysLeft = product.jours_restants;
+                    let statusClass, statusText, statusBadge;
+
+                    if (daysLeft < 0) {
+                        statusClass = 'border-danger';
+                        statusText = 'text-danger';
+                        statusBadge = 'bg-danger';
+                    } else if (daysLeft <= 7) {
+                        statusClass = 'border-warning';
+                        statusText = 'text-warning';
+                        statusBadge = 'bg-warning';
+                    } else {
+                        statusClass = 'border-success';
+                        statusText = 'text-success';
+                        statusBadge = 'bg-success';
+                    }
+
+                    return `
+                        <div class="col-md-4 mb-4 product-card" 
+                             data-category="${product.category_id}"
+                             data-name="${product.nom.toLowerCase()}"
+                             data-days="${daysLeft}"
+                             data-expiry="${product.date_peremption}">
+                            <div class="card h-100 ${statusClass}">
+                                <div class="card-body">
+                                    <div class="category-indicator" style="background-color: ${product.category_couleur}"></div>
+                                    <h5 class="card-title">${product.nom}</h5>
+                                    <p class="card-text">
+                                        <small class="text-muted">Catégorie: ${product.category_nom}</small><br>
+                                        <small class="text-muted">Quantité: ${product.quantite} ${product.unite}</small>
+                                    </p>
+                                    <p class="card-text">
+                                        Date de péremption: ${formatDate(product.date_peremption)}<br>
+                                        Jours restants: <span class="${getDaysLeftClass(product.jours_restants)}">${formatDaysLeft(product.jours_restants)}</span>
+                                    </p>
+                                    ${product.code_barre ? `<p class="card-text">Code-barres: ${product.code_barre}</p>` : ''}
+                                    <button onclick="deleteProduct(${product.id})" class="btn btn-danger btn-sm">
+                                        <i class="bi bi-trash"></i> Supprimer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Erreur lors du chargement de l\'inventaire:', error);
+                inventoryList.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger">
+                            Une erreur est survenue lors du chargement de l'inventaire. 
+                            Veuillez rafraîchir la page ou réessayer plus tard.
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function filterProducts() {
+            const searchTerm = document.getElementById('search').value.toLowerCase();
+            const activeFilter = document.querySelector('[data-filter].active').dataset.filter;
+            const items = document.querySelectorAll('.product-card');
+            
+            items.forEach(item => {
+                const name = item.dataset.name;
+                const days = parseInt(item.dataset.days);
+                let showByFilter = true;
+
+                switch(activeFilter) {
+                    case 'expired':
+                        showByFilter = days < 0;
+                        break;
+                    case 'soon':
+                        showByFilter = days >= 0 && days <= 7;
+                        break;
+                    case 'ok':
+                        showByFilter = days > 7;
+                        break;
+                }
+
+                const matchSearch = name.includes(searchTerm);
+                item.style.display = showByFilter && matchSearch ? '' : 'none';
+            });
+
+            // Afficher un message si aucun résultat
+            const visibleItems = document.querySelectorAll('.product-card[style=""]').length;
+            const noResultsMsg = document.getElementById('no-results-message');
+            
+            if (visibleItems === 0) {
+                if (!noResultsMsg) {
+                    const message = document.createElement('div');
+                    message.id = 'no-results-message';
+                    message.className = 'col-12 mt-3';
+                    message.innerHTML = `
+                        <div class="alert alert-info">
+                            Aucun produit ne correspond à votre recherche.
+                        </div>
+                    `;
+                    document.getElementById('inventory-container').appendChild(message);
+                }
+            } else if (noResultsMsg) {
+                noResultsMsg.remove();
+            }
+        }
+
+        async function deleteProduct(index) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit de votre inventaire ?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/delete-product/${index}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadInventory();
+                } else {
+                    alert('Une erreur est survenue lors de la suppression du produit. Veuillez réessayer.');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Une erreur est survenue lors de la suppression du produit. Veuillez réessayer.');
+            }
+        }
+
+        function formatDate(dateString) {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('fr-FR', options);
+        }
+
+        function formatDaysLeft(days) {
+            if (days < 0) {
+                return `Périmé depuis ${Math.abs(days)} jour${Math.abs(days) > 1 ? 's' : ''}`;
+            } else if (days === 0) {
+                return 'Périme aujourd\'hui';
+            } else if (days === 1) {
+                return 'Périme demain';
+            } else if (days <= 7) {
+                return `Périme dans ${days} jour${days > 1 ? 's' : ''}`;
+            } else {
+                return `${days} jour${days > 1 ? 's' : ''} avant péremption`;
+            }
+        }
+
+        function getDaysLeftClass(days) {
+            if (days < 0) {
+                return 'text-danger';
+            } else if (days <= 7) {
+                return 'text-warning';
+            } else {
+                return 'text-success';
+            }
+        }
+    </script>
+
+    <style>
+        .category-filters {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 5px;
+        }
+        .category-filters::-webkit-scrollbar {
+            height: 5px;
+        }
+        .category-filters::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .category-filters::-webkit-scrollbar-thumb {
+            background: #888;
+        }
+        .category-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            border-radius: 3px 3px 0 0;
+        }
+        .btn-outline-secondary.active {
+            background-color: #6c757d;
+            color: white !important;
+        }
+    </style>
+</body>
+</html>

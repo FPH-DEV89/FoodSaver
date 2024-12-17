@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner - FoodSaver</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">FoodSaver</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/scan">Scanner</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/inventory">Inventaire</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="card-title">Scanner un produit</h2>
+                        
+                        <!-- Zone de scan -->
+                        <div class="text-center mb-3">
+                            <video id="scanner-video" class="w-100"></video>
+                        </div>
+                        
+                        <!-- Boutons de contrôle -->
+                        <div class="text-center mb-3">
+                            <button id="start-scan" class="btn btn-primary">
+                                <i class="bi bi-camera"></i> Démarrer le scan
+                            </button>
+                            <button id="stop-scan" class="btn btn-secondary" style="display: none;">
+                                <i class="bi bi-stop-circle"></i> Arrêter
+                            </button>
+                        </div>
+
+                        <!-- Résultat du scan -->
+                        <div id="scan-result" class="alert alert-info" style="display: none;"></div>
+                        
+                        <!-- Formulaire pour les détails du produit -->
+                        <form id="product-form" class="mt-4" style="display: none;">
+                            <div class="mb-3">
+                                <label for="nom" class="form-label">Nom du produit</label>
+                                <input type="text" class="form-control" id="nom" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="date_peremption" class="form-label">Date de péremption</label>
+                                <input type="date" class="form-control" id="date_peremption" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="code_barre" class="form-label">Code-barres</label>
+                                <input type="text" class="form-control" id="code_barre" readonly>
+                            </div>
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-plus-circle"></i> Ajouter à l'inventaire
+                                </button>
+                                <a href="/inventory" class="btn btn-secondary">
+                                    <i class="bi bi-arrow-left"></i> Retour à l'inventaire
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
+
+    <style>
+        #scanner-video {
+            max-width: 100%;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        
+        .alert {
+            display: none;
+            margin-top: 1rem;
+        }
+        
+        .form-control:read-only {
+            background-color: #f8f9fa;
+        }
+    </style>
+</body>
+</html>

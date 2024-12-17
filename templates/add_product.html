@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Ajouter un produit</h4>
+                </div>
+                <div class="card-body">
+                    <form id="addProductForm">
+                        <div class="mb-3">
+                            <label for="nom" class="form-label">Nom du produit</label>
+                            <input type="text" class="form-control" id="nom" name="nom" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Catégorie</label>
+                            <select class="form-select" id="category" name="category_id" required>
+                                <option value="">Sélectionner une catégorie</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}" data-color="{{ category.couleur }}">
+                                    {{ category.nom }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="quantite" class="form-label">Quantité</label>
+                                <input type="number" class="form-control" id="quantite" name="quantite" value="1" min="1" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="unite" class="form-label">Unité</label>
+                                <select class="form-select" id="unite" name="unite">
+                                    <option value="unité">Unité</option>
+                                    <option value="kg">Kilogramme</option>
+                                    <option value="g">Gramme</option>
+                                    <option value="l">Litre</option>
+                                    <option value="ml">Millilitre</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="date_peremption" class="form-label">Date de péremption</label>
+                            <input type="date" class="form-control" id="date_peremption" name="date_peremption" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="code_barre" class="form-label">Code-barres (optionnel)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="code_barre" name="code_barre">
+                                <button class="btn btn-outline-secondary" type="button" id="scanButton">
+                                    <i class="bi bi-upc-scan"></i> Scanner
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-plus-circle"></i> Ajouter
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('addProductForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        nom: document.getElementById('nom').value,
+        category_id: document.getElementById('category').value,
+        quantite: document.getElementById('quantite').value,
+        unite: document.getElementById('unite').value,
+        date_peremption: document.getElementById('date_peremption').value,
+        code_barre: document.getElementById('code_barre').value
+    };
+
+    try {
+        const response = await fetch('/api/products', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        if (response.ok) {
+            window.location.href = '/inventory';
+        } else {
+            const data = await response.json();
+            alert('Erreur : ' + data.error);
+        }
+    } catch (error) {
+        alert('Erreur lors de l\'ajout du produit');
+    }
+});
+
+// Initialiser la date de péremption à aujourd'hui
+document.getElementById('date_peremption').valueAsDate = new Date();
+
+// Mettre à jour la couleur de la catégorie sélectionnée
+document.getElementById('category').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const color = selectedOption.dataset.color;
+    this.style.borderColor = color;
+});
+</script>
+{% endblock %}
